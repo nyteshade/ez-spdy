@@ -1,0 +1,28 @@
+{
+  "name": "ez-spdy",
+  "version": "0.9.0",
+  "description": "An easy and less complicated way to integrate HTTP/2 via Spdy and Express",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nyteshade/ez-spdy.git"
+  },
+  "keywords": [
+    "spdy",
+    "http2",
+    "ssl",
+    "express"
+  ],
+  "author": "Brielle Harrison",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nyteshade/ez-spdy/issues"
+  },
+  "homepage": "https://github.com/nyteshade/ez-spdy#readme",
+  "dependencies": {
+    "spdy": "^3.4.7"
+  }
+}
