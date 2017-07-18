@@ -184,8 +184,5 @@ module.exports = {
   EzSpdy,
   Debug,
   
-  default: {
-    EzSpdy,
-    Debug
-  }
+  default: EzSpdy
 };
