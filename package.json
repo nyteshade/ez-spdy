@@ -1,6 +1,6 @@
 {
   "name": "ez-spdy",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "An easy and less complicated way to integrate HTTP/2 via Spdy and Express",
   "main": "src/index.js",
   "scripts": {
