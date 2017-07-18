@@ -28,7 +28,9 @@ function Debug(options, ...args) {
  * SSL cert paths for each environment are stored. EzSpdy expects an object 
  * with a key for each environment string, tested against NODE_ENV in a 
  * case insensitive manner, is mapped to an object with a "cert" and a "key"
- * properties. 
+ * properties. If you have already require()'ed your package.json into an 
+ * object, you can also pass that object instead of a path to the 
+ * package.json file.
  *
  * "cert" and "key" should be filesystem paths to the associated files. Many 
  * SSL certs have inconsistent file extensions. The "cert" is a certificate 
@@ -63,12 +65,19 @@ function EzSpdy(
 ) {
   const deferred = {};
   const file = p => fs.readFileSync(p).toString();
-  const pkg = require(path.resolve(pathToPackageJSON));
   const dbg = Debug.bind(global, opts);
   const env = process.env.NODE_ENV || 'development';
   let secureServer;
   let sslCert;
   let port = opts.port;
+  let pkg;
+  
+  if (/\bObject\b/.test(Object.prototype.toString.apply(pathToPackageJSON))) {
+    pkg = pathToPackageJSON;
+  }
+  else {
+    pkg = require(path.resolve(pathToPackageJSON));
+  }
   
   if (process.env.SSL_PORT)     port = process.env.SSL_PORT;
   if (process.env.SSLPORT)      port = process.env.SSLPORT;
