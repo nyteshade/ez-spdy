@@ -34,8 +34,12 @@ function Debug(options, ...args) {
  *     443. To override this, set the port in opts or set it via ENV variables 
  *     in any of the following properties; SSL_PORT, SSLPORT or SECURE_PORT
  *   * `onListening` if this is a falsey value, an internal representation will 
- *     be used. A single parameter will be passed along that is the internal 
- *     function if you simply wish to extend it.
+ *     be used. The first parameter passed along that is the internal will be a
+ *     function that, if called, will display the normal output for debug mode. 
+ *     The second parameter will be either the error, `spdy` server instance or
+ *     `null` if there was no cert matching the `NODE_ENV` value. NOTE that if 
+ *     no `NODE_ENV` value is provided, `development` is the value being 
+ *     searched for in `package.json`.
  *     
  * The third parameter is the path to the package.json where your various
  * SSL cert paths for each environment are stored. EzSpdy expects an object 
@@ -150,7 +154,7 @@ function EzSpdy(
             else 
               deferred.resolve(secureServer);
               
-            tellTheWorld();
+            tellTheWorld(error || secureServer);
           });
 
         break;
@@ -158,18 +162,20 @@ function EzSpdy(
 
       if (!sslCert) {
         deferred.resolve(null);
-        tellTheWorld();
+        tellTheWorld(null);
       }
     }
     catch (error) {
       if (error) {
         deferred.reject(error);
-        tellTheWorld();
+        tellTheWorld(error);
       }
     }
   }
   else {
-    deferred.reject(new Error(`
+    let error;
+    
+    deferred.reject((error = new Error(`
       In order to use EzSpdy, you will need to provide a path to a valid
       package.json file that contains an property named "certs". This should
       be an object that properties named for each environment. In the case 
@@ -194,8 +200,8 @@ function EzSpdy(
       open the file and pass the contents to node-spdy using options with the 
       same cert and key names. See node-spdy for more examples on what is
       accepted.
-    `));
-    tellTheWorld();
+    `)));
+    tellTheWorld(error);
   }
     
   return deferred.promise;
