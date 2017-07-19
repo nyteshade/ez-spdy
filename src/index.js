@@ -1,6 +1,7 @@
 const spdy = require('spdy');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 /**
  * A method that wraps and conditionally logs to console.info when the option 
@@ -24,7 +25,19 @@ function Debug(options, ...args) {
  * allowed. See https://github.com/spdy-http2/node-spdy#api for more details on
  * this. 
  *
- * The second parameter is the path to the package.json where your various
+ * opts, the second parameter is an optional object wherein you can specify 
+ * options to change the execution of EzSpdy. 
+ *   * `debug` this key denotes a boolean that, when true, will cause output
+ *     to be written to stdout via console.info. 
+ *   * `port` by default this will be 3443 unless NODE_ENV is set to 'prod' or 
+ *     'production'; in which case, if not otherwise defined, it will be set to
+ *     443. To override this, set the port in opts or set it via ENV variables 
+ *     in any of the following properties; SSL_PORT, SSLPORT or SECURE_PORT
+ *   * `onListening` if this is a falsey value, an internal representation will 
+ *     be used. A single parameter will be passed along that is the internal 
+ *     function if you simply wish to extend it.
+ *     
+ * The third parameter is the path to the package.json where your various
  * SSL cert paths for each environment are stored. EzSpdy expects an object 
  * with a key for each environment string, tested against NODE_ENV in a 
  * case insensitive manner, is mapped to an object with a "cert" and a "key"
@@ -37,36 +50,30 @@ function Debug(options, ...args) {
  * file and "key" is your private key file. If you are using a Macintosh and 
  * have only a .p12 or bundled .pfx file, i.e. a certificate that has an 
  * encoded cert and key file within, you can use KeyCertExtractor to extract 
- * these easily. You can download a version here: 
- * https://github.com/nyteshade/KeyCertExtractor/raw/master/KeyCertExtractor.app.zip
+ * these easily. You can download a version here: https://goo.gl/W6ZFJm. The 
+ * repo hosting this app is https://github.com/nyteshade/KeyCertExtractor.
  *
- * opts, the third parameter is an optional object wherein you can specify 
- * options to change the execution of EzSpdy. 
- *   * `debug` this key denotes a boolean that, when true, will cause output
- *     to be written to stdout via console.info. 
- *   * `port` by default this will be 3443 unless NODE_ENV is set to 'prod' or 
- *     'production'; in which case, if not otherwise defined, it will be set to
- *     443. To override this, set the port in opts or set it via ENV variables 
- *     in any of the following properties; SSL_PORT, SSLPORT or SECURE_PORT
  * 
  * @method EzSpdy
  * @param {Express} an instance of Express that serves as your core express app
+ * @param {Object} [opts={debug: false, port: 3443}] an optional set of options
  * @param {String} [pathToPackageJSON='./package.json'] a string denoting the 
  * path to the projects package.json file.
- * @param {Object} [opts={debug: false, port: 3443}] an optional set of options
  *
  * @return {Spdy} the created Spdy server instance of null if something went
  * wrong.
  */
 function EzSpdy(
   expressApp, 
-  pathToPackageJSON = './package.json', 
-  opts = { debug: false, port: 3443 }
+  opts = { debug: false, port: 3443, onListening: null },
+  pathToPackageJSON = './package.json'
 ) {
   const deferred = {};
   const file = p => fs.readFileSync(p).toString();
   const dbg = Debug.bind(global, opts);
   const env = process.env.NODE_ENV || 'development';
+  
+  let tellTheWorld;
   let secureServer;
   let sslCert;
   let port = opts.port;
@@ -93,6 +100,34 @@ function EzSpdy(
     deferred.reject = reject;
   });
   
+  // Setup tellTheWorld
+  function _tellTheWorld() {
+    dbg('');
+    dbg(`[Environment ] ${env}`);
+    dbg(`[Production  ] ${/prod(uction)/i.test(env)}`);
+    deferred.promise
+      .then((secureServer) => {      
+        if (!secureServer) {
+          dbg(`[HTTP/2      ] disabled`)
+        }
+        else {
+          dbg(`[HTTP/2 URL  ] https://${os.hostname()}:${port}`);
+        }
+      })
+      .catch((reason) => {
+        dbg(`[HTTP/2      ] error occurred`);
+        dbg(`[Error       ] ${reason && reason.message || reason}`)
+        if (reason.stack)
+          dbg(`[Stack Trace ]\n${reason && reason.stack}`)
+      });    
+  }
+  
+  // Provide _tellTheWorld to the supplied onListening option if present, or
+  // simply set it to the internal function if an override is not available
+  tellTheWorld = 
+    opts.onListening && opts.onListening.bind(null, _tellTheWorld) 
+    || _tellTheWorld;
+    
   if (pkg.certs) {
     try {
       for (let environment in pkg.certs) {
@@ -108,12 +143,14 @@ function EzSpdy(
         };
 
         secureServer = spdy
-          .createServer(sslCert, app)
+          .createServer(sslCert, expressApp)
           .listen(port, error => {
-            if (error) {
-              deferred.reject(error);
-            }
-            deferred.resolve(secureServer);
+            if (error)
+              deferred.reject(error);              
+            else 
+              deferred.resolve(secureServer);
+              
+            tellTheWorld();
           });
 
         break;
@@ -121,11 +158,13 @@ function EzSpdy(
 
       if (!sslCert) {
         deferred.resolve(null);
+        tellTheWorld();
       }
     }
     catch (error) {
       if (error) {
         deferred.reject(error);
+        tellTheWorld();
       }
     }
   }
@@ -156,27 +195,9 @@ function EzSpdy(
       same cert and key names. See node-spdy for more examples on what is
       accepted.
     `));
+    tellTheWorld();
   }
-  
-  dbg('');
-  dbg(`[Environment ] ${env}`);
-  dbg(`[Production  ] ${/prod(uction)/i.test(env)}`);
-  deferred.promise
-    .then((secureServer) => {      
-      if (!secureServer) {
-        dbg(`[HTTP/2      ] disabled`)
-      }
-      else {
-        dbg(`[HTTP/2 Port ] https://127.0.0.1:${port}`);
-      }
-    })
-    .catch((reason) => {
-      dbg(`[HTTP/2      ] error occurred`);
-      dbg(`[Error       ] ${reason && reason.message || reason}`)
-      if (reason.stack)
-        dbg(`[Stack Trace ]\n${reason && reason.stack}`)
-    });
-  
+    
   return deferred.promise;
 }
 
