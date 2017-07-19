@@ -51,11 +51,12 @@ import EzSpdy from 'ez-spdy'
 Once the import/require has been performed, simply call it with your Express 4.x app instance or appropriate listener function (See <https://github.com/spdy-http2/node-spdy#api>).
 
 ```javascript
-// Default example using Express
+// Somewhere at the top
 const EzSpdy = require('ez-spdy').EzSpdy;
 const Express = require('express');
 const app = Express();
-// configure app
+
+// Start listening with HTTP/2
 const promise = EzSpdy(app);
 ```
 
