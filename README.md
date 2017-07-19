@@ -67,6 +67,14 @@ In order to see output once the server instance is listening or if an error has 
 const promise = EzSpdy(app, {debug: true});
 ```
 
+Output will look something like this
+
+```sh
+[Environment ] production
+[Production  ] true
+[HTTP/2 URL  ] https://machinename.company.com:3443
+```
+
 ### Adjust SSL port
 
 You can also configure the specified port via environmental variables or by passing a port property to the options. So during startup, perhaps something like
@@ -145,7 +153,7 @@ switch (typeOf(httpsServer)) {
 
 ## Example `package.json` cert values
 
-ez-spdy expects there to be a "certs" key in the pacakge.json root. This should be equivalent to the name of the environment for which you are supplying options. A nice trick to this is to name the environments after your hostname. This makes it easy for you to have startup scripts and setups like the following:
+ez-spdy expects there to be a "certs" key in the package.json root. This should be equivalent to the name of the environment for which you are supplying options. A nice trick to this is to name the environments after your hostname. This makes it easy for you to have startup scripts and setups like the following:
 
 ```json
 {
