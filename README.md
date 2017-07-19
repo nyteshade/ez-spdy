@@ -72,7 +72,7 @@ Output will look something like this
 ```sh
 [Environment ] production
 [Production  ] true
-[HTTP/2 URL  ] https://machinename.company.com:3443
+[HTTP/2 URL  ] https://machinename.company.com:443
 ```
 
 ### Adjust SSL port
