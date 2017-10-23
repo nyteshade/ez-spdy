@@ -75,18 +75,32 @@ function Pact(promiseOrValue, timeOut, resolveAfterTimeOut) {
  * }
  * ```
  */
-function getFQDN() {
-  const uqdn = os.hostname();
+function getFQDN(skip = false, localDomain = '.local') {
   const p = Pact();
+  let uqdn = os.hostname();
+    
+  if (!path.parse(uqdn).ext.length) {
+    uqdn += localDomain
+  }
 
-  dns.lookup(uqdn, { hints: dns.ADDRCONFIG }, function(err, ip) {
-    dns.lookupService(ip, 0, function (err, hostname, service) {
-      if (err) {
-        return p.reject(err);
-      }
-      p.resolve({hostname, service, fqdn: hostname, uqdn})
-    });
-  });  
+  if (!skip) {
+    dns.lookup(uqdn, { hints: dns.ADDRCONFIG }, function(err, ip) {
+      dns.lookupService(ip, 0, function (err, hostname, service) {
+        if (err) {
+          return p.reject(err);
+        }
+        p.resolve({hostname, service, fqdn: hostname, uqdn})
+      });
+    });  
+  }
+  else {
+    p.resolve({
+      hostname: uqdn,
+      service: null,
+      fqdn: uqdn,
+      uqdn 
+    })
+  }
   
   return p.promise;
 }
@@ -150,10 +164,10 @@ function Debug(options, ...args) {
  */
 function EzSpdy(
   expressApp, 
-  opts = { debug: false, port: 3443, package: null, env: null }
+  opts = { debug: false, port: 3443, package: null, env: null, skipFQDN: false }
 ) {
   const deferred = Pact();
-  const fdqnPromise = Pact(getFQDN(), 5000).promise;
+  const fdqnPromise = Pact(getFQDN(opts.skipFQDN), 5000).promise;
   const file = p => fs.readFileSync(p).toString();
   const dbg = Debug.bind(global, opts);
   const env = opts.env || process.env.NODE_ENV || 'development';
@@ -315,6 +329,7 @@ module.exports = {
   Debug,
   Pact,
   typeOf,
+  getFQDN,
   
   default: EzSpdy
 };
